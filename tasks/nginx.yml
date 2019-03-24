@@ -1,0 +1,83 @@
+---
+  - block:
+      - name: Add jenkins.io repo
+        apt_repository:
+          repo: "ppa:certbot/certbot"
+
+      - name: Install Nginx
+        apt:
+          name: nginx
+          state: latest
+
+      - name: Install certbot (letsencrypt)
+        apt:
+          name: python-certbot-nginx
+          state: latest
+
+      - name: Make Nginx SSL Directory
+        file:
+          path: /etc/nginx/ssl
+          state: directory
+
+      - name: Make sure pip is latest
+        pip:
+          name: "{{item}}"
+          state: latest
+        with_items:
+          - pip
+
+      - name: Template NGINX
+        template:
+          src: templates/jenkins.conf.j2
+          dest: /etc/nginx/sites-available/jenkins.conf
+          group: www-data
+          mode: 0770
+        when: not self_signed_cert
+
+      - name: Template NGINX self signed
+        template:
+          src: templates/jenkins_self_singed.conf.j2
+          dest: /etc/nginx/sites-available/jenkins.conf
+          group: www-data
+          mode: 0770
+        when: self_signed_cert
+
+      - file: path=/etc/nginx/sites-available/default.conf state=absent
+      - file: path=/etc/nginx/sites-enabled/default state=absent
+
+      - name: Generate SSL
+        shell: certbot certonly --standalone -n -m dev@example.com --agree-to --non-interactive -d {{ jenkins_dns }} --preferred-challenges "tls-sni-01"
+        when: not self_signed_cert
+
+      - name: Set Nginx ssl key
+        copy:
+          content: "{{ jenkins.ssl_key }}"
+          dest: "/etc/nginx/ssl/nginx.ssl"
+        when: self_signed_cert
+
+      - name: Set Nginx ssl certificate
+        copy:
+          content: "{{ jenkins.ssl_certificate }}"
+          dest: "/etc/nginx/ssl/nginx.crt"
+        when: self_signed_cert
+
+      - name: Create Nginx Symlink
+        file:
+          src: /etc/nginx/sites-available/jenkins.conf
+          dest: /etc/nginx/sites-enabled/jenkins
+          state: link
+
+      - name: Start nginx
+        service:
+          name: nginx
+          state: restarted
+
+      - name: create auto-renew task
+        cron:
+          name: "certbot auto renew"
+          job: "certbot renew --non-interactive --post-hook 'service nginx reload'"
+          day: 1
+          hour: 3
+        when: not self_signed_cert
+
+    become: true

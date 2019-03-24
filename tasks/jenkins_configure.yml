@@ -1,0 +1,20 @@
+---
+  - name: configure Jenkins
+    block:
+    - name: disable security
+      shell: find {{ jenkins_home }} -type f -iname "config.xml" -exec sed -i 's/<useSecurity>true<\/useSecurity>/<useSecurity>false<\/useSecurity>/g' {} \;
+
+    - name: disable all jobs
+      shell: find {{ jenkins_home }}/jobs -type f -iname "config.xml" -exec sed -i 's/<disabled>false<\/disabled>/<disabled>true<\/disabled>/g' {} \;
+
+    - name: download prod jenkins version
+      get_url:
+        url: https://updates.jenkins-ci.org/download/war/2.75/jenkins.war
+        dest: /usr/share/jenkins/jenkins.war
+        force: yes
+        group: "{{ jenkins_group }}"
+        owner: "{{ jenkins_user }}"
+      notify:
+        - restart jenkins
+
+    become: true

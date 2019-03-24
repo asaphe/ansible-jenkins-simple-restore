@@ -1,0 +1,91 @@
+---
+  - name: prerequisites
+    block:
+    - name: Required Pip packages
+      pip:
+        name: "{{ item }}"
+      with_items:
+        - awscli
+        - botocore
+        - boto
+        - boto3
+        - aws-encryption-sdk-cli
+      register: pip_out
+
+    become: true
+
+  - name: Download from S3
+    block:
+    - name: Discover S3 files
+      no_log: true
+      aws_s3:
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_key }}"
+        bucket: "{{ s3_bucket_name }}"
+        mode: list
+      register: s3_objects
+      when: discover_s3_files
+
+    - name: set s3_object_name
+      set_fact:
+        s3_object_name: "{{ s3_objects.s3_keys | max }}"
+      when: discover_s3_files
+
+    - name: set local_file
+      set_fact:
+        local_absolute_file_path: "/tmp/{{ s3_object_name }}"
+
+    - name: Download discovered file from S3
+      no_log: true
+      aws_s3:
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_key }}"
+        bucket: "{{ s3_bucket_name }}"
+        object: "{{ s3_object_name }}"
+        dest: "{{ local_absolute_file_path }}"
+        mode: get
+        ignore_nonexistent_bucket: True
+      when: discover_s3_files
+
+    - name: Download from S3
+      no_log: true
+      aws_s3:
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_key }}"
+        bucket: "{{ s3_bucket_name }}"
+        object: "{{ s3_object_name }}"
+        dest: "{{ local_absolute_file_path }}"
+        mode: get
+        ignore_nonexistent_bucket: True
+      when: not discover_s3_files
+
+    become: true
+
+  - name: decrypt & extract
+    block:
+    - debug: msg="{{ local_absolute_file_path }}"
+
+    - name: Decrypt backup archive
+      no_log: true
+      shell: "aws-encryption-cli --decrypt -i {{ local_absolute_file_path }} -o . --suppress-metadata"
+      args:
+        chdir: '/tmp'
+      environment:
+        AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+        AWS_DEFAULT_REGION: "{{ aws_region }}"
+
+
+    - name: "extract backup directory to {{ jenkins_home }}"
+      shell: "tar -zxvf {{ local_absolute_file_path }}.decrypted -C {{ jenkins_home }} --strip-components=2"
+
+    - name: "chown {{ jenkins_home }}"
+      file:
+        path: "{{ jenkins_home }}"
+        owner: "{{ jenkins_user }}"
+        group: "{{ jenkins_group }}"
+        recurse: yes
+      notify:
+        - restart jenkins
+
+    become: true

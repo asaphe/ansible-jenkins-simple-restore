@@ -1,0 +1,22 @@
+---
+local_absolute_file_path:
+
+s3_bucket_name: "{{ s3_prefix }}-jenkins-backup-prod-dr"
+s3_object_name:
+s3_prefix: 'vim'
+
+aws_access_key: "{{ lookup('env','AWS_ACCESS_KEY_ID') }}"
+aws_secret_key: "{{ lookup('env','AWS_SECRET_ACCESS_KEY') }}"
+aws_region: "{{ lookup('env','AWS_DEFAULT_REGION') }}"
+
+discover_s3_files: True
+
+jenkins_user: 'jenkins'
+jenkins_group: "{{ jenkins_user }}"
+jenkins_home: '/var/lib/jenkins'
+jenkins_pkg_version: present
+
+self_signed_cert: True
+jenkins_dns: jenkins.example.com
+registrar_email: dev@example.com
+letsencrypt_live_base_path: /etc/letsencrypt/live/

@@ -1,0 +1,30 @@
+---
+  - name: jenkins
+    block:
+    - name: add Jenkins repository key
+      apt_key:
+        url: https://pkg.jenkins.io/debian/jenkins-ci.org.key
+        state: present
+
+    - name: add Jenkins repositroy
+      apt_repository:
+        repo: "deb [arch=amd64] http://pkg.jenkins.io/debian-stable binary/"
+        state: present
+
+    - name: install Jenkins apt package
+      apt:
+        name: jenkins
+        state: "{{ jenkins_pkg_version }}"
+        force: no
+        update_cache: yes
+        autoremove: yes
+        autoclean: yes
+        install_recommends: yes
+
+    - name: "Empty {{ jenkins_home }}"
+      file:
+        path: "{{ jenkins_home }}/*"
+        state: absent
+      when: not skip_clean_jenkinshome|default(false)
+
+    become: true

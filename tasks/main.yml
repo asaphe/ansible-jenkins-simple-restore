@@ -1,0 +1,12 @@
+---
+  - import_tasks: jenkins_install.yml
+    tags: [jenkins.restore.install]
+
+  - import_tasks: restore.yml
+    tags: [jenkins.restore.restore]
+
+  - import_tasks: jenkins_configure.yml
+    tags: [jenkins.restore.configure]
+
+  - import_tasks: nginx.yml
+    tags: [jenkins.restore.nginx]

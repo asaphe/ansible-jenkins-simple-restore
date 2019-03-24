@@ -6,6 +6,8 @@ The idea here is to install the desired Jenkins version via a package manager (t
 due to memory and performance issues some Ansible Modules were dropped. (Trying to avoid running commands through shell)
 Ansible rsync module is still in use but performance might be a bit slow due to using it.
 
+* OS: Ubuntu 16.04+
+
 ### Defaults
 
 ```yaml
@@ -27,7 +29,7 @@ jenkins_user: 'jenkins'
 jenkins_group: "{{ jenkins_user }}"
 ```
 
->**Errors tend to be generic, use -vvvv to debug. Usually it will be a permissions issue or a quoting or other key related issue'**
+>**Errors can seem generic, use -vvvv to debug. Usually it will be a permissions issue, quoting or some other key related issue'**
 
 ## Usage Example
 
